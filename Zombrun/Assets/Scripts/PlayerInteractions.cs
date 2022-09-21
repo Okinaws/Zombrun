@@ -6,6 +6,7 @@ public class PlayerInteractions : MonoBehaviour
     private IEnumerator Die()
     {
         PlayerController.Instance.animator.SetTrigger("Death");
+        PlayerController.Instance.movingCoroutine = null;
         RoadGenerator.Instance.speed = 0;
         PropGenerator.Instance.speed = 0;
         FireManager.Instance.fireFlag = false;

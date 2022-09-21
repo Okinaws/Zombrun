@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -15,7 +16,8 @@ public class PlayerController : Singleton<PlayerController>
     private float pointStart;
     private float pointFinish;
     private bool isMoving = false;
-    private Coroutine movingCoroutine;
+    [NonSerialized]
+    public Coroutine movingCoroutine;
     private int sidelinesCount = 2;
 
     void Start()
