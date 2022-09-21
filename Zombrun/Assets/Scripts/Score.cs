@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 
@@ -9,6 +10,8 @@ public class Score : Singleton<Score>
     [SerializeField]
     private TextMeshProUGUI bestScoreText;
     private int bestScore = 0;
+    [NonSerialized]
+    public bool isPaused = false;
 
     private void Awake()
     {
@@ -19,14 +22,18 @@ public class Score : Singleton<Score>
         }
     }
 
-    private void FixedUpdate()
+    private void Update()
     {
-        score++;
-        scoreText.text = $"SCORE: {score}";
+        if (!isPaused)
+        {
+            score++;
+            scoreText.text = $"SCORE: {score}";
+        }
     }
 
     public void ResetLevel()
     {
+        isPaused = false;
         bestScoreText.gameObject.SetActive(true);
         scoreText.gameObject.SetActive(false);
         if (score > bestScore) 

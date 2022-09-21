@@ -9,6 +9,7 @@ public class PlayerInteractions : MonoBehaviour
         RoadGenerator.Instance.speed = 0;
         PropGenerator.Instance.speed = 0;
         FireManager.Instance.fireFlag = false;
+        Score.Instance.isPaused = true;
 
         yield return new WaitForSeconds(1.9f);
         PlayerController.Instance.ResetGame();

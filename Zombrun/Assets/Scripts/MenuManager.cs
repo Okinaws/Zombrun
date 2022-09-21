@@ -16,10 +16,12 @@ public class MenuManager : Singleton<MenuManager>
     public void Pause()
     {
         Time.timeScale = 0;
+        Score.Instance.isPaused = true;
     }
 
     public void Resume()
     {
         Time.timeScale = 1f;
+        Score.Instance.isPaused = false;
     }
 }
