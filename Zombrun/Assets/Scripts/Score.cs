@@ -18,8 +18,9 @@ public class Score : Singleton<Score>
         if (PlayerPrefs.HasKey("BestScore"))
         {
             bestScore = PlayerPrefs.GetInt("BestScore");
-            bestScoreText.text = $"BEST SCORE: {bestScore}";
         }
+
+        bestScoreText.text = $"BEST SCORE: {bestScore}";
     }
 
     private void Update()

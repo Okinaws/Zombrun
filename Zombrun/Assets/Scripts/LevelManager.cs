@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -16,11 +17,14 @@ public class LevelManager : Singleton<LevelManager>
     private Image[] zombieHeadsDone;
     private int zombieNeed = 0;
     public int zombieKilled = 0;
-    private int maxLevels;
+    [NonSerialized]
+    public int maxLevels;
+    private float expNeeded;
 
     private void Start()
     {
         maxLevels = PlayerController.Instance.prefabs.Length;
+        expNeeded = ExpNeedToLvlUp(level);
     }
 
     public void ZombieDone()
@@ -35,40 +39,38 @@ public class LevelManager : Singleton<LevelManager>
         }
     }
 
-    public static int ExpNeedToLvlUp(int currentLevel)
+    public static float ExpNeedToLvlUp(int currentLevel)
     {
         if (currentLevel == 0) return 0;
-        return (currentLevel * currentLevel + currentLevel) * 5;
+        return currentLevel * 10f;
     }
 
     public void SetExperience(float exp)
     {
         if (level == maxLevels) return;
         experience += exp;
-        float expNeeded = ExpNeedToLvlUp(level);
 
         if(experience > expNeeded)
         {
             experience = expNeeded;
         }
 
-        float previousExperience = ExpNeedToLvlUp(level - 1);
-
         if(experience == expNeeded && zombieKilled >= zombieNeed)
         {
             expBarImage.fillAmount = 0;
             LevelUp();
-            expNeeded = ExpNeedToLvlUp(level);
-            previousExperience = ExpNeedToLvlUp(level - 1);
         }
-        if (level != maxLevels) expBarImage.fillAmount = (experience - previousExperience) / (expNeeded - previousExperience);
+        if (level != maxLevels) expBarImage.fillAmount = experience / expNeeded;
     }
 
     public void LevelUp()
     {
         if (level == maxLevels) return;
+        Vibration.Instance.Vibrate(50);
+        StartCoroutine(CameraShake.Instance.Shake(1f, 0.3f));
         level++;
-        zombieNeed++;
+        expNeeded = ExpNeedToLvlUp(level);
+        experience = 0;
         if (level == maxLevels)
         {
             lvlText.text = "MAX LEVEL";
@@ -76,6 +78,7 @@ public class LevelManager : Singleton<LevelManager>
         }
         else
         {
+            zombieNeed++;
             lvlText.text = $"LEVEL {level - 1}";
 
             for (int i = 0; i < zombieNeed; i++)
@@ -89,7 +92,31 @@ public class LevelManager : Singleton<LevelManager>
             }
         }
         zombieKilled = 0;
-        PlayerController.Instance.PlayerUp(level - 1);
+        PlayerController.Instance.levelUp.Play();
+        PlayerController.Instance.PlayerChange(level - 1);
+    }
+
+    public void LevelDown()
+    {
+        if (level == 1) return;
+        level--;
+        expNeeded = ExpNeedToLvlUp(level);
+        experience = 0;
+        expBarImage.fillAmount = 0;
+
+        for (int i = 0; i < zombieNeed; i++)
+        {
+            zombieHeadsDone[i].gameObject.SetActive(false);
+        }
+
+        if (level + 1 != maxLevels)
+        {
+            zombieNeed--;
+            zombieHeads[zombieNeed].gameObject.SetActive(false);
+        }
+        lvlText.text = $"LEVEL {level - 1}";
+        zombieKilled = 0;
+        PlayerController.Instance.PlayerChange(level - 1);
     }
 
     public void ResetLevel()
@@ -98,6 +125,7 @@ public class LevelManager : Singleton<LevelManager>
         zombieNeed = 0;
         zombieKilled = 0;
         level = 1;
+        expNeeded = ExpNeedToLvlUp(level);
         expBarImage.fillAmount = 0;
         lvlText.text = $"LEVEL 0";
         if (level != maxLevels)

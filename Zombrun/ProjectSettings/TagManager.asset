@@ -7,6 +7,7 @@ TagManager:
   - Lose
   - LvlItem
   - Zombie
+  - Coin
   layers:
   - Default
   - TransparentFX

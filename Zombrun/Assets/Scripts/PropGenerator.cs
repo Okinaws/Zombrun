@@ -9,13 +9,15 @@ public class PropGenerator : Singleton<PropGenerator>
     private GameObject[] zombiePrefabs;
     [SerializeField]
     private GameObject[] lvlItemPrefabs;
+    [SerializeField]
+    private GameObject coinPrefab;
     public List<GameObject> props = new List<GameObject>();
     private float maxSpeed;
     [SerializeField]
     private float zombieSpeed = 2f;
     public float speed = 0;
     private float[] positions = { -5f, -2.5f, 0, 2.5f, 5f };
-    private float lvlItemsHeight = 0.5f;
+    private float itemsHeight = 0.5f;
     private int lvlItemsCount = 4;
     private int spawnOrder = 1;
     private float propTimePassed = 0f;
@@ -133,7 +135,7 @@ public class PropGenerator : Singleton<PropGenerator>
         {
             Vector3 pos = Vector3.zero;
             pos = new Vector3(randLine, 0, transform.position.z);
-            itemPos.y = lvlItemsHeight;
+            itemPos.y = itemsHeight;
             itemPos.z = i * (15f / lvlItemsCount);
             GameObject lvlItem = PoolManager.Instance.Spawn(randLvlItem, itemPos + pos, itemRot);
             lvlItem.transform.SetParent(transform);
@@ -141,12 +143,24 @@ public class PropGenerator : Singleton<PropGenerator>
         }
     }
 
+    public void CreateCoin(Vector3 pos, int coins)
+    {
+        Vector3 itemPos = Vector3.zero;
+        Quaternion itemRot = Quaternion.Euler(0,0,0);
+        itemPos.y = itemsHeight;
+        GameObject coin = PoolManager.Instance.Spawn(coinPrefab, itemPos + pos, itemRot);
+        coin.transform.SetParent(transform);
+        coin.gameObject.GetComponent<Coin>().coinsCount = coins;
+        props.Add(coin);
+    }
+
     private void CreateZombie()
     {
         Vector3 pos = Vector3.zero;
         Quaternion rot = Quaternion.Euler(0, 180, 0);
         pos = new Vector3(positions[Random.Range(0, positions.Length)], 0, transform.position.z);
-        GameObject zombie = Instantiate(zombiePrefabs[Random.Range(0, zombiePrefabs.Length)], pos, rot);
+        GameObject zombie = PoolManager.Instance.Spawn(zombiePrefabs[Random.Range(0, zombiePrefabs.Length)], pos, rot);
+        zombie.gameObject.GetComponent<ZombieController>().ResetZombie();
         zombie.transform.SetParent(transform);
         props.Add(zombie);
     }

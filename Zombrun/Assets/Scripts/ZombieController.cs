@@ -7,7 +7,8 @@ public class ZombieController : MonoBehaviour
 {
     [SerializeField]
     private ParticleSystem blood;
-    private BoxCollider boxCollider;
+    [SerializeField]
+    private ParticleSystem death;
     [SerializeField]
     private TextMeshProUGUI levelText;
     [SerializeField]
@@ -23,14 +24,20 @@ public class ZombieController : MonoBehaviour
 
     void Start()
     {
+        ResetZombie();
+    }
+
+    public void ResetZombie()
+    {
+        animator = GetComponent<Animator>();
+        gameObject.tag = "Zombie";
         int playerLevel = LevelManager.Instance.level - 1;
         level = Random.Range(playerLevel, playerLevel + 2);
         if (level == 0) level = 1;
         MaxHP = HPForLevel * level;
         HP = MaxHP;
-        levelText.text += level.ToString();
-        animator = GetComponent<Animator>();
-        boxCollider = GetComponent<BoxCollider>();
+        levelText.text = $"LEVEL {level}";
+        healthBar.fillAmount = 1;
     }
 
     public void AttackPlayer()
@@ -42,11 +49,12 @@ public class ZombieController : MonoBehaviour
     {
         healthBar.fillAmount = 0;
         gameObject.tag = "Untagged";
+        death.Play();
         animator.SetTrigger("Death");
-        boxCollider.enabled = false;
         FireManager.Instance.fireFlag = false;
         LevelManager.Instance.ZombieDone();
         LevelManager.Instance.SetExperience((float)level * 2);
+        PropGenerator.Instance.CreateCoin(transform.position, level);
         yield return new WaitForSeconds(dieTime);
         PoolManager.Instance.Despawn(gameObject);
         PropGenerator.Instance.props.Remove(gameObject);

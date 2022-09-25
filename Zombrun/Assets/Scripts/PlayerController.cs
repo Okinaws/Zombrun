@@ -1,39 +1,53 @@
 using System;
 using System.Collections;
+using DG.Tweening;
 using UnityEngine;
 
 public class PlayerController : Singleton<PlayerController>
 {
     public GameObject[] prefabs;
     public GameObject player;
+    [NonSerialized]
     public Animator animator;
-    private Vector3 startGamePosition;
     [SerializeField]
-    private float laneOffset = 2.5f;
-    [SerializeField]
-    private float laneChangeSpeed = 15;
+    private float maxDistance = 5f;
     private Rigidbody rb;
-    private float pointStart;
-    private float pointFinish;
-    private bool isMoving = false;
     [NonSerialized]
     public Coroutine movingCoroutine;
-    private int sidelinesCount = 2;
+    [NonSerialized]
+    public float speed;
+    [SerializeField]
+    private float maxSpeed;
+    [SerializeField]
+    private float lerpDelay;
+    [SerializeField]
+    private float rotAngle;
+    [SerializeField]
+    private float rotDelay;
+    private Vector3 targetPos;
+    private Vector3 nextPos;
+    public bool godMode = false;
+    [SerializeField]
+    private ParticleSystem hit;
+    [SerializeField]
+    private ParticleSystem shield;
+    public ParticleSystem levelUp;
+
 
     void Start()
     {
         animator = player.GetComponent<Animator>();
         rb = player.GetComponent<Rigidbody>();
-        startGamePosition = player.transform.position;
-        SwipeManager.Instance.MoveEvent += MovePlayer;
+        speed = maxSpeed;
     }
 
-    public void PlayerUp(int number)
+    public void PlayerChange(int number)
     {
         Vector3 oldPosition = player.transform.position;
         player.SetActive(false);
         player = prefabs[number];
         player.transform.position = oldPosition;
+        hit.transform.position = player.transform.position;
         animator = player.GetComponent<Animator>();
         rb = player.GetComponent<Rigidbody>();
         FireManager.Instance.FireUp(number);
@@ -45,44 +59,35 @@ public class PlayerController : Singleton<PlayerController>
         player = prefabs[0];
     }
 
-    void MovePlayer(bool[] swipes)
+    public void Move(float deltaMove)
     {
-        if (swipes[(int)SwipeManager.Direction.Left] && pointFinish > sidelinesCount * -laneOffset)
+        if (deltaMove != 0)
         {
-            Move(-laneChangeSpeed);
+            targetPos = player.transform.position + new Vector3(deltaMove * speed, 0, 0);
+            nextPos = Vector3.Lerp(player.transform.position, targetPos, lerpDelay);
         }
-        if (swipes[(int)SwipeManager.Direction.Right] && pointFinish < sidelinesCount * laneOffset)
-        {
-            Move(laneChangeSpeed);
-        }
-    }
 
-    void Move(float speed)
-    {
-        pointStart = pointFinish;
-        pointFinish += Mathf.Sign(speed) * laneOffset;
-        if (isMoving)
+        if (Math.Abs(nextPos.x) < maxDistance)
         {
-            StopCoroutine(movingCoroutine);
-            isMoving = false;
+            player.transform.position = Vector3.Lerp(player.transform.position, targetPos, lerpDelay);
         }
-        movingCoroutine = StartCoroutine(MoveCoroutine(speed));
-    }
-
-    IEnumerator MoveCoroutine(float vectorX)
-    {
-        isMoving = true;
-        while (Mathf.Abs(pointStart - player.transform.position.x) < laneOffset)
+        else
         {
-            yield return new WaitForFixedUpdate();
-
-            rb.velocity = new Vector3(vectorX, rb.velocity.y, 0);
-            float x = Mathf.Clamp(player.transform.position.x, Mathf.Min(pointStart, pointFinish), Mathf.Max(pointStart, pointFinish));
-            player.transform.position = new Vector3(x, player.transform.position.y, player.transform.position.z);
+            player.transform.position = Vector3.Lerp(player.transform.position, new Vector3(Math.Sign(targetPos.x) * maxDistance, 0, 0), 1f);
         }
-        rb.velocity = Vector3.zero;
-        player.transform.position = new Vector3(pointFinish, player.transform.position.y, player.transform.position.z);
-        isMoving = false;
+
+        if (deltaMove > 0)
+        {
+            player.transform.DORotate(new Vector3(0, rotAngle, 0), rotDelay);
+        }
+        else if (deltaMove < 0)
+        {
+            player.transform.DORotate(new Vector3(0, -rotAngle, 0), rotDelay);
+        }
+        else
+        {
+            player.transform.DORotate(new Vector3(0, 0, 0), rotDelay);
+        }
     }
 
     public void StartGame()
@@ -96,16 +101,58 @@ public class PlayerController : Singleton<PlayerController>
 
     public void ResetGame()
     {
-        PlayerUp(0);
+        PlayerChange(0);
+        targetPos = Vector3.zero;
         rb.velocity = Vector3.zero;
-        pointStart = 0;
-        pointFinish = 0;
-        player.transform.position = startGamePosition;
+        player.transform.position = Vector3.zero;
+        speed = maxSpeed;
         RoadGenerator.Instance.ResetLevel();
         PropGenerator.Instance.ResetLevel();
         LevelManager.Instance.ResetLevel();
         FireManager.Instance.ResetLevel();
         Score.Instance.ResetLevel();
         MenuManager.Instance.ResetGame();
+    }
+
+    public void Death()
+    {
+        StartCoroutine(Die());
+    }
+
+    public IEnumerator Die()
+    {
+        hit.Play();
+        Vibration.Instance.Vibrate(100);
+        StartCoroutine(CameraShake.Instance.Shake(1f, 0.5f));
+        if (LevelManager.Instance.level == 1)
+        {
+            animator.SetTrigger("Death");
+            speed = 0;
+            RoadGenerator.Instance.speed = 0;
+            PropGenerator.Instance.speed = 0;
+            FireManager.Instance.fireFlag = false;
+            Score.Instance.isPaused = true;
+        }
+        else
+        {
+            godMode = true;
+            shield.Play();
+            LevelManager.Instance.LevelDown();
+            if (prefabs[0] == player)
+            {
+                animator.SetTrigger("Run");
+            }
+        }
+        yield return new WaitForSeconds(1.9f);
+
+        if (!godMode)
+        {
+            ResetGame();
+        }
+        else
+        {
+            godMode = false;
+            shield.Stop();
+        }
     }
 }
